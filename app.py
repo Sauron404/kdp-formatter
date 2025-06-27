@@ -50,7 +50,7 @@ def add_table_of_contents(doc):
     fldChar1 = OxmlElement('w:fldChar')
     fldChar1.set(qn('w:fldCharType'), 'begin')
     instrText = OxmlElement('w:instrText')
-    instrText.text = 'TOC \o "1-3" \h \z \u'
+   instrText.text = 'TOC \\o "1-3" \\h \\z \\u'
     fldChar2 = OxmlElement('w:fldChar')
     fldChar2.set(qn('w:fldCharType'), 'separate')
     fldChar3 = OxmlElement('w:fldChar')
