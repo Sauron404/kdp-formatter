@@ -1,6 +1,9 @@
 import streamlit as st
 from docx import Document
 from docx.shared import Pt, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 import tempfile
 import os
 
@@ -10,8 +13,57 @@ try:
 except ImportError:
     DOCX2PDF_AVAILABLE = False
 
-# Funzione per applicare formattazione KDP
-def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pagina=True):
+# Funzione per creare una pagina con testo centrato
+
+def add_centered_page(doc, lines):
+    doc.add_page_break()
+    for line in lines:
+        p = doc.add_paragraph(line)
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.runs[0]
+        run.font.size = Pt(16)
+        run.font.name = 'Georgia'
+
+# Funzione per inserire numeri di pagina
+
+def add_page_numbers(section):
+    footer = section.footer
+    paragraph = footer.paragraphs[0]
+    paragraph.text = ""
+    run = paragraph.add_run()
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+    instrText = OxmlElement('w:instrText')
+    instrText.text = 'PAGE'
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'end')
+    run._r.append(fldChar1)
+    run._r.append(instrText)
+    run._r.append(fldChar2)
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+# Funzione per aggiungere indice basato sui titoli
+
+def add_table_of_contents(doc):
+    p = doc.add_paragraph()
+    run = p.add_run()
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+    instrText = OxmlElement('w:instrText')
+    instrText.text = 'TOC \o "1-3" \h \z \u'
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'separate')
+    fldChar3 = OxmlElement('w:fldChar')
+    fldChar3.set(qn('w:fldCharType'), 'end')
+    run._r.append(fldChar1)
+    run._r.append(instrText)
+    run._r.append(fldChar2)
+    run._r.append(fldChar3)
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+# Funzione principale di formattazione
+
+def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pagina=True, titolo_libro="Titolo del Libro", autore_libro="Autore", editore="Nome Editore"):
     doc = Document(uploaded_file)
 
     # Imposta margini
@@ -20,17 +72,32 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
         section.bottom_margin = Inches(0.79)
         section.left_margin = Inches(0.87)
         section.right_margin = Inches(0.67)
+        if numeri_pagina and formato == "cartaceo":
+            add_page_numbers(section)
 
-    # Applica font
+    # Applica font, giustificazione e formatta titoli
     for paragraph in doc.paragraphs:
+        text = paragraph.text.strip().lower()
+        if text.startswith("capitolo"):
+            paragraph.style = 'Heading 1'
+        elif text.startswith("sezione"):
+            paragraph.style = 'Heading 2'
+        else:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for run in paragraph.runs:
             run.font.name = 'Georgia'
             run.font.size = Pt(12)
 
-    # Inserisci frontespizio
+    # Frontespizio
     if frontespizio:
-        doc.paragraphs[0].insert_paragraph_before("Titolo del Libro")
-        doc.paragraphs[1].insert_paragraph_before("Autore")
+        doc._body.clear_content()
+        add_centered_page(doc, [titolo_libro, autore_libro])
+        add_centered_page(doc, [f"\u00a9 2025 {editore}", "Tutti i diritti riservati"])
+        doc.add_page_break()
+        doc.add_paragraph("Indice")
+        add_table_of_contents(doc)
+        doc.add_page_break()
+        doc.add_paragraph("Inizio contenuto del libro...")
 
     return doc
 
@@ -42,11 +109,22 @@ uploaded_file = st.file_uploader("📤 Carica il tuo file Word", type=["docx"])
 formato = st.selectbox("🖋️ Formato desiderato:", ["cartaceo", "ebook"])
 add_frontespizio = st.checkbox("Aggiungi frontespizio?", value=True)
 add_numeri_pagina = st.checkbox("Aggiungi numeri di pagina?", value=True)
+titolo_libro = st.text_input("Titolo del libro:", "Titolo del Libro")
+autore_libro = st.text_input("Autore:", "Autore")
+editore = st.text_input("Editore:", "Nome Editore")
 
 if uploaded_file:
     if st.button("📄 Formatta il documento"):
         with st.spinner("Formattazione in corso..."):
-            doc = format_docx(uploaded_file, formato=formato, frontespizio=add_frontespizio, numeri_pagina=add_numeri_pagina)
+            doc = format_docx(
+                uploaded_file,
+                formato=formato,
+                frontespizio=add_frontespizio,
+                numeri_pagina=add_numeri_pagina,
+                titolo_libro=titolo_libro,
+                autore_libro=autore_libro,
+                editore=editore
+            )
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
                 doc.save(tmp.name)
@@ -61,7 +139,6 @@ if uploaded_file:
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
 
-            # Genera PDF se possibile
             if DOCX2PDF_AVAILABLE:
                 with tempfile.TemporaryDirectory() as tmpdir:
                     pdf_path = os.path.join(tmpdir, "output.pdf")
@@ -75,3 +152,4 @@ if uploaded_file:
                         )
 
             os.remove(docx_path)
+
