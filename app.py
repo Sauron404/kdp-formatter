@@ -33,4 +33,5 @@ st.title("📘 KDP Formatter 6x9")
 st.write("Carica un file Word `.docx` e ottieni un file formattato per la stampa su KDP.")
 
 uploaded_file = st.file_uploader("📤 Carica il tuo file Word", type=["docx"])
-formato = st.selectbox("📏 Formato desider
+formato = st.selectbox("🖋️ Formato desiderato:", ["cartaceo", "ebook"])
+
