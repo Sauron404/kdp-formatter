@@ -14,7 +14,6 @@ except ImportError:
     DOCX2PDF_AVAILABLE = False
 
 # Funzione per creare una pagina con testo centrato
-
 def add_centered_page(doc, lines):
     doc.add_page_break()
     for line in lines:
@@ -25,7 +24,6 @@ def add_centered_page(doc, lines):
         run.font.name = 'Georgia'
 
 # Funzione per inserire numeri di pagina
-
 def add_page_numbers(section):
     footer = section.footer
     paragraph = footer.paragraphs[0]
@@ -43,26 +41,30 @@ def add_page_numbers(section):
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
 # Funzione per aggiungere indice basato sui titoli
-
 def add_table_of_contents(doc):
     p = doc.add_paragraph()
     run = p.add_run()
+
     fldChar1 = OxmlElement('w:fldChar')
     fldChar1.set(qn('w:fldCharType'), 'begin')
+
     instrText = OxmlElement('w:instrText')
-   instrText.text = 'TOC \\o "1-3" \\h \\z \\u'
+    instrText.text = 'TOC \\o "1-3" \\h \\z \\u'
+
     fldChar2 = OxmlElement('w:fldChar')
     fldChar2.set(qn('w:fldCharType'), 'separate')
+
     fldChar3 = OxmlElement('w:fldChar')
     fldChar3.set(qn('w:fldCharType'), 'end')
+
     run._r.append(fldChar1)
     run._r.append(instrText)
     run._r.append(fldChar2)
     run._r.append(fldChar3)
+
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
 # Funzione principale di formattazione
-
 def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pagina=True, titolo_libro="Titolo del Libro", autore_libro="Autore", editore="Nome Editore"):
     doc = Document(uploaded_file)
 
@@ -78,12 +80,11 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
     # Applica font, giustificazione e formatta titoli
     for paragraph in doc.paragraphs:
         text = paragraph.text.strip().lower()
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         if text.startswith("capitolo"):
             paragraph.style = 'Heading 1'
         elif text.startswith("sezione"):
             paragraph.style = 'Heading 2'
-        else:
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for run in paragraph.runs:
             run.font.name = 'Georgia'
             run.font.size = Pt(12)
@@ -102,11 +103,11 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
     return doc
 
 st.set_page_config(page_title="KDP Formatter", layout="centered")
-st.title("📘 KDP Formatter 6x9")
+st.title("\U0001F4D8 KDP Formatter 6x9")
 st.write("Carica un file Word `.docx` e ottieni un file formattato per KDP, pronto per la stampa o l'eBook.")
 
-uploaded_file = st.file_uploader("📤 Carica il tuo file Word", type=["docx"])
-formato = st.selectbox("🖋️ Formato desiderato:", ["cartaceo", "ebook"])
+uploaded_file = st.file_uploader("\U0001F4E4 Carica il tuo file Word", type=["docx"])
+formato = st.selectbox("\U0001F58B️ Formato desiderato:", ["cartaceo", "ebook"])
 add_frontespizio = st.checkbox("Aggiungi frontespizio?", value=True)
 add_numeri_pagina = st.checkbox("Aggiungi numeri di pagina?", value=True)
 titolo_libro = st.text_input("Titolo del libro:", "Titolo del Libro")
@@ -114,7 +115,7 @@ autore_libro = st.text_input("Autore:", "Autore")
 editore = st.text_input("Editore:", "Nome Editore")
 
 if uploaded_file:
-    if st.button("📄 Formatta il documento"):
+    if st.button("\U0001F4C4 Formatta il documento"):
         with st.spinner("Formattazione in corso..."):
             doc = format_docx(
                 uploaded_file,
@@ -131,9 +132,9 @@ if uploaded_file:
                 docx_path = tmp.name
 
             with open(docx_path, "rb") as f:
-                st.success("✅ Documento Word formattato con successo!")
+                st.success("\u2705 Documento Word formattato con successo!")
                 st.download_button(
-                    label="📥 Scarica .DOCX",
+                    label="\U0001F4E5 Scarica .DOCX",
                     data=f,
                     file_name="kdp_formattato.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -145,11 +146,10 @@ if uploaded_file:
                     docx_to_pdf(docx_path, pdf_path)
                     with open(pdf_path, "rb") as pdf_file:
                         st.download_button(
-                            label="📄 Scarica anche in PDF",
+                            label="\U0001F4C4 Scarica anche in PDF",
                             data=pdf_file,
                             file_name="kdp_formattato.pdf",
                             mime="application/pdf"
                         )
 
             os.remove(docx_path)
-
