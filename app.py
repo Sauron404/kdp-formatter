@@ -17,9 +17,9 @@ except ImportError:
 def add_centered_page(doc, lines):
     doc.add_page_break()
     for line in lines:
-        p = doc.add_paragraph(line)
+        p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = p.runs[0]
+        run = p.add_run(line)
         run.font.size = Pt(16)
         run.font.name = 'Georgia'
 
@@ -44,24 +44,18 @@ def add_page_numbers(section):
 def add_table_of_contents(doc):
     p = doc.add_paragraph()
     run = p.add_run()
-
     fldChar1 = OxmlElement('w:fldChar')
     fldChar1.set(qn('w:fldCharType'), 'begin')
-
     instrText = OxmlElement('w:instrText')
     instrText.text = r'TOC \\o "1-3" \\h \\z \\u'
-
     fldChar2 = OxmlElement('w:fldChar')
     fldChar2.set(qn('w:fldCharType'), 'separate')
-
     fldChar3 = OxmlElement('w:fldChar')
     fldChar3.set(qn('w:fldCharType'), 'end')
-
     run._r.append(fldChar1)
     run._r.append(instrText)
     run._r.append(fldChar2)
     run._r.append(fldChar3)
-
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
 # Verifica se uno stile esiste nel documento
@@ -72,12 +66,22 @@ def style_exists(doc, style_name):
     except KeyError:
         return False
 
+# Verifica se un paragrafo può essere un titolo
+def is_probable_title(paragraph):
+    text = paragraph.text.strip()
+    if not text or len(text) > 80:
+        return False
+    is_bold = any(run.bold for run in paragraph.runs if run.text.strip())
+    is_upper = text.isupper()
+    has_larger_font = any(run.font.size and run.font.size.pt >= 14 for run in paragraph.runs)
+    conditions_met = sum([is_bold, is_upper, has_larger_font])
+    return conditions_met >= 2
+
 # Formatta il documento
 def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pagina=True, titolo_libro="Titolo del Libro", autore_libro="Autore", editore="Nome Editore"):
     original_doc = Document(uploaded_file)
     doc = Document()
 
-    # Frontespizio + indice
     if frontespizio:
         add_centered_page(doc, [titolo_libro, autore_libro])
         add_centered_page(doc, [f"© 2025 {editore}", "Tutti i diritti riservati"])
@@ -86,20 +90,14 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
         add_table_of_contents(doc)
         doc.add_page_break()
 
-    # Aggiunge contenuto originale
     has_heading1 = style_exists(doc, 'Heading 1')
-    has_heading2 = style_exists(doc, 'Heading 2')
 
     for para in original_doc.paragraphs:
-        if para.text.strip().lower().startswith("capitolo"):
+        if is_probable_title(para):
             doc.add_page_break()
             new_p = doc.add_paragraph(para.text)
             if has_heading1:
                 new_p.style = 'Heading 1'
-        elif para.text.strip().lower().startswith("sezione"):
-            new_p = doc.add_paragraph(para.text)
-            if has_heading2:
-                new_p.style = 'Heading 2'
         else:
             new_p = doc.add_paragraph(para.text)
 
@@ -108,7 +106,6 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
             run.font.name = 'Georgia'
             run.font.size = Pt(12)
 
-    # Margini 6x9 pollici e numeri pagina
     for section in doc.sections:
         section.top_margin = Inches(0.79)
         section.bottom_margin = Inches(0.79)
