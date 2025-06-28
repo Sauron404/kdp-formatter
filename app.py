@@ -64,6 +64,14 @@ def add_table_of_contents(doc):
 
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
+# Verifica se uno stile esiste nel documento
+def style_exists(doc, style_name):
+    try:
+        _ = doc.styles[style_name]
+        return True
+    except KeyError:
+        return False
+
 # Formatta il documento
 def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pagina=True, titolo_libro="Titolo del Libro", autore_libro="Autore", editore="Nome Editore"):
     doc = Document(uploaded_file)
@@ -77,13 +85,16 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
         if numeri_pagina and formato == "cartaceo":
             add_page_numbers(section)
 
+    has_heading1 = style_exists(doc, 'Heading 1')
+    has_heading2 = style_exists(doc, 'Heading 2')
+
     # Font e stili
     for paragraph in doc.paragraphs:
         text = paragraph.text.strip().lower()
         paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        if text.startswith("capitolo"):
+        if text.startswith("capitolo") and has_heading1:
             paragraph.style = 'Heading 1'
-        elif text.startswith("sezione"):
+        elif text.startswith("sezione") and has_heading2:
             paragraph.style = 'Heading 2'
         for run in paragraph.runs:
             run.font.name = 'Georgia'
@@ -154,3 +165,4 @@ if uploaded_file:
                         )
 
             os.remove(docx_path)
+
