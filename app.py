@@ -13,7 +13,7 @@ try:
 except ImportError:
     DOCX2PDF_AVAILABLE = False
 
-# Funzione per creare una pagina con testo centrato
+# Crea una pagina centrata con un certo testo
 def add_centered_page(doc, lines):
     doc.add_page_break()
     for line in lines:
@@ -23,7 +23,7 @@ def add_centered_page(doc, lines):
         run.font.size = Pt(16)
         run.font.name = 'Georgia'
 
-# Funzione per inserire numeri di pagina
+# Aggiungi numeri di pagina nel piè di pagina
 def add_page_numbers(section):
     footer = section.footer
     paragraph = footer.paragraphs[0]
@@ -40,7 +40,7 @@ def add_page_numbers(section):
     run._r.append(fldChar2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-# Funzione per aggiungere indice basato sui titoli
+# Aggiunge l'indice automatico con i livelli Heading
 def add_table_of_contents(doc):
     p = doc.add_paragraph()
     run = p.add_run()
@@ -49,7 +49,7 @@ def add_table_of_contents(doc):
     fldChar1.set(qn('w:fldCharType'), 'begin')
 
     instrText = OxmlElement('w:instrText')
-    instrText.text = 'TOC \\o "1-3" \\h \\z \\u'
+    instrText.text = r'TOC \\o "1-3" \\h \\z \\u'
 
     fldChar2 = OxmlElement('w:fldChar')
     fldChar2.set(qn('w:fldCharType'), 'separate')
@@ -64,11 +64,11 @@ def add_table_of_contents(doc):
 
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-# Funzione principale di formattazione
+# Formatta il documento
 def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pagina=True, titolo_libro="Titolo del Libro", autore_libro="Autore", editore="Nome Editore"):
     doc = Document(uploaded_file)
 
-    # Imposta margini
+    # Margini 6x9 pollici
     for section in doc.sections:
         section.top_margin = Inches(0.79)
         section.bottom_margin = Inches(0.79)
@@ -77,7 +77,7 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
         if numeri_pagina and formato == "cartaceo":
             add_page_numbers(section)
 
-    # Applica font, giustificazione e formatta titoli
+    # Font e stili
     for paragraph in doc.paragraphs:
         text = paragraph.text.strip().lower()
         paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
@@ -89,11 +89,11 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
             run.font.name = 'Georgia'
             run.font.size = Pt(12)
 
-    # Frontespizio
+    # Frontespizio + indice
     if frontespizio:
         doc._body.clear_content()
         add_centered_page(doc, [titolo_libro, autore_libro])
-        add_centered_page(doc, [f"\u00a9 2025 {editore}", "Tutti i diritti riservati"])
+        add_centered_page(doc, [f"© 2025 {editore}", "Tutti i diritti riservati"])
         doc.add_page_break()
         doc.add_paragraph("Indice")
         add_table_of_contents(doc)
@@ -102,9 +102,10 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
 
     return doc
 
+# Streamlit UI
 st.set_page_config(page_title="KDP Formatter", layout="centered")
 st.title("\U0001F4D8 KDP Formatter 6x9")
-st.write("Carica un file Word `.docx` e ottieni un file formattato per KDP, pronto per la stampa o l'eBook.")
+st.write("Carica un file Word `.docx` e ottieni un file formattato per la stampa o l'eBook.")
 
 uploaded_file = st.file_uploader("\U0001F4E4 Carica il tuo file Word", type=["docx"])
 formato = st.selectbox("\U0001F58B️ Formato desiderato:", ["cartaceo", "ebook"])
@@ -132,7 +133,7 @@ if uploaded_file:
                 docx_path = tmp.name
 
             with open(docx_path, "rb") as f:
-                st.success("\u2705 Documento Word formattato con successo!")
+                st.success("✅ Documento Word formattato con successo!")
                 st.download_button(
                     label="\U0001F4E5 Scarica .DOCX",
                     data=f,
