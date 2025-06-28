@@ -73,7 +73,6 @@ def style_exists(doc, style_name):
         return False
 
 # Formatta il documento
-
 def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pagina=True, titolo_libro="Titolo del Libro", autore_libro="Autore", editore="Nome Editore"):
     original_doc = Document(uploaded_file)
     doc = Document()
@@ -92,12 +91,19 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
     has_heading2 = style_exists(doc, 'Heading 2')
 
     for para in original_doc.paragraphs:
-        new_p = doc.add_paragraph(para.text)
+        if para.text.strip().lower().startswith("capitolo"):
+            doc.add_page_break()
+            new_p = doc.add_paragraph(para.text)
+            if has_heading1:
+                new_p.style = 'Heading 1'
+        elif para.text.strip().lower().startswith("sezione"):
+            new_p = doc.add_paragraph(para.text)
+            if has_heading2:
+                new_p.style = 'Heading 2'
+        else:
+            new_p = doc.add_paragraph(para.text)
+
         new_p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        if para.text.strip().lower().startswith("capitolo") and has_heading1:
-            new_p.style = 'Heading 1'
-        elif para.text.strip().lower().startswith("sezione") and has_heading2:
-            new_p.style = 'Heading 2'
         for run in new_p.runs:
             run.font.name = 'Georgia'
             run.font.size = Pt(12)
