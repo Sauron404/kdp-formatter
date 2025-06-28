@@ -73,10 +73,36 @@ def style_exists(doc, style_name):
         return False
 
 # Formatta il documento
-def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pagina=True, titolo_libro="Titolo del Libro", autore_libro="Autore", editore="Nome Editore"):
-    doc = Document(uploaded_file)
 
-    # Margini 6x9 pollici
+def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pagina=True, titolo_libro="Titolo del Libro", autore_libro="Autore", editore="Nome Editore"):
+    original_doc = Document(uploaded_file)
+    doc = Document()
+
+    # Frontespizio + indice
+    if frontespizio:
+        add_centered_page(doc, [titolo_libro, autore_libro])
+        add_centered_page(doc, [f"© 2025 {editore}", "Tutti i diritti riservati"])
+        doc.add_page_break()
+        doc.add_paragraph("Indice")
+        add_table_of_contents(doc)
+        doc.add_page_break()
+
+    # Aggiunge contenuto originale
+    has_heading1 = style_exists(doc, 'Heading 1')
+    has_heading2 = style_exists(doc, 'Heading 2')
+
+    for para in original_doc.paragraphs:
+        new_p = doc.add_paragraph(para.text)
+        new_p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        if para.text.strip().lower().startswith("capitolo") and has_heading1:
+            new_p.style = 'Heading 1'
+        elif para.text.strip().lower().startswith("sezione") and has_heading2:
+            new_p.style = 'Heading 2'
+        for run in new_p.runs:
+            run.font.name = 'Georgia'
+            run.font.size = Pt(12)
+
+    # Margini 6x9 pollici e numeri pagina
     for section in doc.sections:
         section.top_margin = Inches(0.79)
         section.bottom_margin = Inches(0.79)
@@ -84,32 +110,6 @@ def format_docx(uploaded_file, formato="cartaceo", frontespizio=True, numeri_pag
         section.right_margin = Inches(0.67)
         if numeri_pagina and formato == "cartaceo":
             add_page_numbers(section)
-
-    has_heading1 = style_exists(doc, 'Heading 1')
-    has_heading2 = style_exists(doc, 'Heading 2')
-
-    # Font e stili
-    for paragraph in doc.paragraphs:
-        text = paragraph.text.strip().lower()
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        if text.startswith("capitolo") and has_heading1:
-            paragraph.style = 'Heading 1'
-        elif text.startswith("sezione") and has_heading2:
-            paragraph.style = 'Heading 2'
-        for run in paragraph.runs:
-            run.font.name = 'Georgia'
-            run.font.size = Pt(12)
-
-    # Frontespizio + indice
-    if frontespizio:
-        doc._body.clear_content()
-        add_centered_page(doc, [titolo_libro, autore_libro])
-        add_centered_page(doc, [f"© 2025 {editore}", "Tutti i diritti riservati"])
-        doc.add_page_break()
-        doc.add_paragraph("Indice")
-        add_table_of_contents(doc)
-        doc.add_page_break()
-        doc.add_paragraph("Inizio contenuto del libro...")
 
     return doc
 
@@ -139,6 +139,8 @@ if uploaded_file:
                 editore=editore
             )
 
+            filename_base = titolo_libro.strip().lower().replace(" ", "_") or "kdp_formattato"
+
             with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
                 doc.save(tmp.name)
                 docx_path = tmp.name
@@ -148,7 +150,7 @@ if uploaded_file:
                 st.download_button(
                     label="\U0001F4E5 Scarica .DOCX",
                     data=f,
-                    file_name="kdp_formattato.docx",
+                    file_name=f"{filename_base}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
 
@@ -160,9 +162,8 @@ if uploaded_file:
                         st.download_button(
                             label="\U0001F4C4 Scarica anche in PDF",
                             data=pdf_file,
-                            file_name="kdp_formattato.pdf",
+                            file_name=f"{filename_base}.pdf",
                             mime="application/pdf"
                         )
 
             os.remove(docx_path)
-
